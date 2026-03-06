@@ -1,5 +1,6 @@
 #include "smegemm.h"
 #include <stdint.h>
+#include <stdio.h>
 
 __attribute__((target("+sme"))) __arm_locally_streaming void
 BufferSubMatrixAAndTranspose(int Submatrixa_M, int Submatrixa_K, int K,

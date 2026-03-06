@@ -1,10 +1,21 @@
 .PHONY: all clean
 
 
+TARGET ?= MAC
+
 CC = clang
-CFLAGS = -O3 -march=armv9-a+nosve+sme -Iinclude 
-ASMFLAGS = -O3 -march=armv9-a+nosve+sme -Iinclude 
 LINKFLAGS = -rtlib=compiler-rt
+
+ifeq ($(TARGET),MAC)
+  MARCH = armv9-a+nosve+sme
+else ifeq ($(TARGET),LS)
+  MARCH = armv9-a+sve+sve2+sme
+else
+  $(error Unknown TARGET "$(TARGET)". Use MAC or LS)
+endif
+
+CFLAGS = -O3 -march=$(MARCH) -Iinclude
+ASMFLAGS = -O3 -march=$(MARCH) -Iinclude
 
 DIR_BUILD = build
 DIR_EXEC = exec
