@@ -2,8 +2,8 @@
 
 
 CC = clang
-CFLAGS = -O3 -march=armv9-a+sve+sve2+sme -Iinclude 
-ASMFLAGS = -O3 -march=armv9-a+sve+sve2+sme -Iinclude 
+CFLAGS = -O3 -march=armv9-a+nosve+sme -Iinclude 
+ASMFLAGS = -O3 -march=armv9-a+nosve+sme -Iinclude 
 LINKFLAGS = -rtlib=compiler-rt
 
 DIR_BUILD = build

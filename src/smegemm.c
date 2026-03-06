@@ -4,7 +4,7 @@
 __attribute__((target("+sme"))) __arm_locally_streaming void
 BufferSubMatrixAAndTranspose(int Submatrixa_M, int Submatrixa_K, int K,
                              uint8_t *Matrixa, uint8_t *MatrixaTileBuffer) {
-  uint64_t CntIn32OfSVL = svcntw();
+  uint64_t CntIn32OfSVL = svcntw(); // 16
   printf("%llu\n", CntIn32OfSVL);
 }
 
