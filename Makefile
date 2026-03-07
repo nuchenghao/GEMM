@@ -1,4 +1,4 @@
-.PHONY: all clean
+.PHONY: all clean test
 
 
 TARGET ?= MAC
@@ -24,15 +24,17 @@ DIRS = $(DIR_BUILD) $(DIR_EXEC)
 
 EXE = gemm
 EXE := $(addprefix $(DIR_EXEC)/, $(EXE))
+EXE_TEST = $(DIR_EXEC)/test
+LIB_MATMUL = test/libmatmul.a
 
-DIR_SRC = src
+VPATH = src:test
 
-C_FILES = $(wildcard $(DIR_SRC)/*.c)
-ASM_FILES = $(wildcard $(DIR_SRC)/*.s)
-OBJ_FILES = $(C_FILES:$(DIR_SRC)/%.c=$(DIR_BUILD)/%_c.o)
-OBJ_FILES += $(ASM_FILES:$(DIR_SRC)/%.s=$(DIR_BUILD)/%_s.o)
+C_FILES = $(wildcard src/*.c)
+ASM_FILES = $(wildcard src/*.s)
+OBJ_FILES = $(addprefix $(DIR_BUILD)/,$(patsubst %.c,%_c.o,$(notdir $(C_FILES))))
+OBJ_FILES += $(addprefix $(DIR_BUILD)/,$(patsubst %.s,%_s.o,$(notdir $(ASM_FILES))))
 
-DEP_FILES = $(OBJ_FILES:%.o=%.d)
+DEP_FILES = $(OBJ_FILES:%.o=%.d) $(patsubst test/%.c,$(DIR_BUILD)/%_c.d,$(wildcard test/*.c))
 
 
 
@@ -43,11 +45,11 @@ all : $(EXE)
 
 
 
-$(DIR_BUILD)/%_c.o: $(DIR_SRC)/%.c
+$(DIR_BUILD)/%_c.o: %.c
 	mkdir -p $(@D)
 	$(CC) $(CFLAGS) -MMD -c $< -o $@
 
-$(DIR_BUILD)/%_s.o: $(DIR_SRC)/%.s
+$(DIR_BUILD)/%_s.o: %.s
 	mkdir -p $(@D)
 	$(CC) $(ASMFLAGS) -MMD -c $< -o $@
 
@@ -56,6 +58,11 @@ $(EXE): $(OBJ_FILES)
 	mkdir -p $(@D)
 	$(CC) $(LINKFLAGS) -o $@  $(OBJ_FILES)
 
+test: $(EXE_TEST)
+
+$(EXE_TEST): $(OBJ_FILES) $(patsubst test/%.c,$(DIR_BUILD)/%_c.o,$(wildcard test/*.c)) $(LIB_MATMUL)
+	mkdir -p $(@D)
+	$(CC) $(LINKFLAGS) -e _UnitTest -o $@ $^
 
 run:
 	@./$(EXE)

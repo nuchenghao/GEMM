@@ -12,4 +12,6 @@
 
 double dClock();
 
+void rand_fill_matrix_fp32(float *matrix_A, int M, int K);
+
 #endif
