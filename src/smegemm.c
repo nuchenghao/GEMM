@@ -24,7 +24,7 @@ __attribute__((target("+sme+nosme2"))) __arm_locally_streaming __arm_new("za") v
             svbool_t POfTile2 = svwhilelt_b32(0, min(CntIn32OfSVL, max(Submatrixa_K - Submatrixa_KI - CntIn32OfSVL * 2, 0)));
             svbool_t POfTile3 = svwhilelt_b32(0, min(CntIn32OfSVL, max(Submatrixa_K - Submatrixa_KI - CntIn32OfSVL * 3, 0)));
             uint32_t *Current416Matrix = Matrixa + Submatixa_MI * K + Submatrixa_KI;
-            uint32_t *Current416MatrixTileBuffer = MatrixaTileBuffer + Submatixa_MI * K + Submatrixa_KI * CntIn32OfSVL;
+            uint32_t *Current416MatrixTileBuffer = MatrixaTileBuffer + Submatixa_MI * Submatrixa_K + Submatrixa_KI * CntIn32OfSVL;
             for (int rowi = 0; rowi < CntIn32OfSVL; ++rowi) {
                 svbool_t POfCurrentColumn0 = svpsel_lane_b32(POfTile0, POf16Rows, rowi);
                 svbool_t POfCurrentColumn1 = svpsel_lane_b32(POfTile1, POf16Rows, rowi);

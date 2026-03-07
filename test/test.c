@@ -31,13 +31,15 @@ void TestBufferSubMatrixAAndTranspose(int M, int K, float *Matrixa, float *resul
 }
 
 int UnitTest() {
-    int MArrayp[] = {1, 23, 1024, 328, 1078, 2049, 7893, 12345, 87630, 12342, 20480, 1, 1000000};
-    int KArrayp[] = {16, 1, 26, 382, 12340, 12048, 1024, 10204, 10240, 1024, 1024, 1000000, 1};
+    int MArrayp[] = {49, 23, 1024, 328, 1078, 2049, 7893, 12345, 87630, 12342, 20480, 1, 1000000};
+    int KArrayp[] = {12340, 1, 26, 382, 12340, 12048, 1024, 10204, 10240, 1024, 1024, 1000000, 1};
     int pass = 1;
     for (int i = 0; i < 13; i++) {
         int M = MArrayp[i];
         int K = KArrayp[i];
+
         float *Matrixa = malloc(M * K * sizeof(float));
+        rand_fill_matrix_fp32(Matrixa, M, K);
         float *correct = malloc(((M + 15) / 16) * 16 * K * sizeof(float));
         float *answer = malloc(((M + 15) / 16) * 16 * K * sizeof(float));
         row_packa_output(M, K, Matrixa, correct);
@@ -70,5 +72,5 @@ int UnitTest() {
     if (pass == 1) {
         printf("All tests passed\n");
     }
-    return 0;
+    exit(0);
 }
