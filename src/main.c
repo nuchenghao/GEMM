@@ -57,7 +57,7 @@ int main() {
     cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, M, N, K, 1.0f, Matrixa, K, Matrixb, N, 0.0f, MatrixBlas, N);
     end = dClock();
     double cblas_time = end - start;
-    printf("CBLAS FP32 GEMM time: %f seconds\n", cblas_time);
+    printf("BLAS FP32 GEMM time: %f seconds\n", cblas_time);
 
     for (int i = 0; i < M * N; i++) {
         if (fabsf(MatrixBlas[i] - MatrixcSMEFP32Gemm[i]) > 1e-3f) {
@@ -78,17 +78,17 @@ int main() {
     cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, M, N, K, 1.0f, Matrixa, K, Matrixb, N, 0.0f, MatrixKBlas, N);
     end = dClock();
     double kblas_time = end - start;
-    printf("KBLAS FP32 GEMM time: %f seconds\n", kblas_time);
+    printf("BLAS FP32 GEMM time: %f seconds\n", kblas_time);
 
     for (int i = 0; i < M * N; i++) {
         if (fabsf(MatrixKBlas[i] - MatrixcSMEFP32Gemm[i]) > 1e-3f) {
-            printf("KBLAS vs SME mismatch at index %d: kblas=%f, sme=%f\n", i, MatrixKBlas[i], MatrixcSMEFP32Gemm[i]);
+            printf("BLAS vs SME mismatch at index %d: blas=%f, sme=%f\n", i, MatrixKBlas[i], MatrixcSMEFP32Gemm[i]);
             mismatch = 1;
             break;
         }
     }
     if (!mismatch) {
-        printf("KBLAS vs SME: all elements match!\n");
+        printf("BLAS vs SME: all elements match!\n");
     }
 
     free(MatrixKBlas);

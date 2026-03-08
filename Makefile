@@ -4,7 +4,7 @@
 TARGET ?= MAC
 
 CC = clang
-LINKFLAGS = -rtlib=compiler-rt
+LINKFLAGS = -rtlib=compiler-rt -lmatmul -L ./test
 
 ifeq ($(TARGET),MAC)
   MARCH = armv9-a+nosve+sme
@@ -13,7 +13,7 @@ ifeq ($(TARGET),MAC)
 else ifeq ($(TARGET),LS)
   MARCH = armv9-a+sve+sve2+sme
   CFLAGS += -DLS
-  LINKFLAGS += -lkblas
+  LINKFLAGS += -lkblas -lm
 else
   $(error Unknown TARGET "$(TARGET)". Use MAC or LS)
 endif
