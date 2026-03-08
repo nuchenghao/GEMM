@@ -8,13 +8,16 @@ LINKFLAGS = -rtlib=compiler-rt
 
 ifeq ($(TARGET),MAC)
   MARCH = armv9-a+nosve+sme
+  CFLAGS += -DMAC -DACCELERATE_NEW_LAPACK
+  LINKFLAGS += -framework Accelerate
 else ifeq ($(TARGET),LS)
   MARCH = armv9-a+sve+sve2+sme
+  CFLAGS += -DLS
 else
   $(error Unknown TARGET "$(TARGET)". Use MAC or LS)
 endif
 
-CFLAGS = -O3 -march=$(MARCH) -Iinclude
+CFLAGS += -O3 -march=$(MARCH) -Iinclude
 ASMFLAGS = -O3 -march=$(MARCH) -Iinclude
 
 DIR_BUILD = build

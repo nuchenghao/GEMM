@@ -17,6 +17,6 @@ double dClock() {
 
 void rand_fill_matrix_fp32(float *matrix_A, int M, int K) {
     for (int i = 0; i < M * K; i++) {
-        matrix_A[i] = 5.0 * (float)drand48();
+        matrix_A[i] = (float)drand48();
     }
 }
