@@ -13,6 +13,7 @@ ifeq ($(TARGET),MAC)
 else ifeq ($(TARGET),LS)
   MARCH = armv9-a+sve+sve2+sme
   CFLAGS += -DLS
+  LINKFLAGS += -lkblas
 else
   $(error Unknown TARGET "$(TARGET)". Use MAC or LS)
 endif

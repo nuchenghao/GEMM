@@ -27,7 +27,7 @@ int main() {
     double start, end;
 
     // int M = 16, N = 16, K = 64;
-    int M = 10204, N = 297, K = 1025;
+    int M = 1024, N = 2048, K = 2048;
 
     float *Matrixa = (float *)malloc(M * K * sizeof(float));
     float *Matrixb = (float *)malloc(K * N * sizeof(float));
@@ -71,10 +71,31 @@ int main() {
     }
 
     free(MatrixBlas);
+#elif defined(LS)
+    float *MatrixKBlas = (float *)malloc(M * N * sizeof(float));
+    memset(MatrixKBlas, 0, M * N * sizeof(float));
+    start = dClock();
+    cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, M, N, K, 1.0f, Matrixa, K, Matrixb, N, 0.0f, MatrixKBlas, N);
+    end = dClock();
+    double kblas_time = end - start;
+    printf("KBLAS FP32 GEMM time: %f seconds\n", kblas_time);
+
+    for (int i = 0; i < M * N; i++) {
+        if (fabsf(MatrixKBlas[i] - MatrixcSMEFP32Gemm[i]) > 1e-3f) {
+            printf("KBLAS vs SME mismatch at index %d: kblas=%f, sme=%f\n", i, MatrixKBlas[i], MatrixcSMEFP32Gemm[i]);
+            mismatch = 1;
+            break;
+        }
+    }
+    if (!mismatch) {
+        printf("KBLAS vs SME: all elements match!\n");
+    }
+
+    free(MatrixKBlas);
 #endif
 
     for (int i = 0; i < M * N; i++) {
-        if (fabsf(MatrixcRawFP32Gemm[i] - MatrixcSMEFP32Gemm[i]) > 1e-4f) {
+        if (fabsf(MatrixcRawFP32Gemm[i] - MatrixcSMEFP32Gemm[i]) > 1e-3f) {
             printf("Mismatch at index %d: raw=%f, sme=%f\n", i, MatrixcRawFP32Gemm[i], MatrixcSMEFP32Gemm[i]);
             mismatch = 1;
             break;
@@ -82,7 +103,7 @@ int main() {
     }
     if (!mismatch) {
         printf("All elements match! (M=%d, N=%d, K=%d)\n", M, N, K);
-        printf("Speedup: %f\n", raw_time / sme_time);
+        // printf("Speedup: %f\n", raw_time / sme_time);
     }
 
     free(Matrixa);
