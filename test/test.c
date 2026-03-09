@@ -11,22 +11,23 @@
 #include "kblas.h"
 #endif
 
-// void row_packa_output(int m, int k, float *XA, float *result);
-void BufferSubMatrixAAndTranspose(int Submatrixa_M, int Submatrixa_K, int K, uint32_t *Matrixa, uint32_t *MatrixaTileBuffer);
+void row_packa_output(int m, int k, float *XA, float *result);
+void buffer_transpose_submatrixa(int Submatrixa_M, int Submatrixa_K, int matrixa_K, uint32_t *matrixa,
+                                 uint32_t *MatrixaTileBuffer);
 
-void TestBufferSubMatrixAAndTranspose(int M, int K, float *Matrixa, float *result) {
+static void test_buffer_transpose_submatrixa(int matrixa_M, int matrixa_K, float *matrixa, float *result) {
     float *restrict atilde_buffer;
     posix_memalign((void **)&atilde_buffer, SME_CACHELINE_SIZE, Submatrix_M * Submatrix_K * sizeof(float));
 
     int total = 0;
-    for (int mi = 0; mi < M; mi += Submatrix_M) {
-        int Submatrixa_M = min(Submatrix_M, M - mi);
+    for (int mi = 0; mi < matrixa_M; mi += Submatrix_M) {
+        int Submatrixa_M = min(Submatrix_M, matrixa_M - mi);
 
-        for (int ki = 0; ki < K; ki += Submatrix_K) {
+        for (int ki = 0; ki < matrixa_K; ki += Submatrix_K) {
 
-            int Submatrixa_K = min(Submatrix_K, K - ki);
-            BufferSubMatrixAAndTranspose(Submatrixa_M, Submatrixa_K, K, (uint32_t *)&Matrixa[mi * K + ki],
-                                         (uint32_t *)atilde_buffer);
+            int Submatrixa_K = min(Submatrix_K, matrixa_K - ki);
+            buffer_transpose_submatrixa(Submatrixa_M, Submatrixa_K, matrixa_K, (uint32_t *)&matrixa[mi * matrixa_K + ki],
+                                        (uint32_t *)atilde_buffer);
 
             int count = (((Submatrixa_M + 15) / 16) * 16) * Submatrixa_K;
             memcpy(&result[total], atilde_buffer, count * sizeof(float));
@@ -37,23 +38,23 @@ void TestBufferSubMatrixAAndTranspose(int M, int K, float *Matrixa, float *resul
     free(atilde_buffer);
 }
 
-int UnitTest4TestBufferSubMatrixAAndTranspose() {
-    int MArrayp[] = {49, 23, 1024, 328, 1078, 2049, 7893, 12345, 87630, 12342, 20480, 1, 1000000};
-    int KArrayp[] = {12340, 1, 26, 382, 12340, 12048, 1024, 10204, 10240, 1024, 1024, 1000000, 1};
+int unitest_buffer_transpose_submatrixa() {
+    int matrixa_M_array[] = {49, 23, 1024, 328, 1078, 2049, 7893, 12345, 87630, 12342, 20480, 1, 1000000};
+    int matrixa_K_array[] = {12340, 1, 26, 382, 12340, 12048, 1024, 10204, 10240, 1024, 1024, 1000000, 1};
     int pass = 1;
     for (int i = 0; i < 13; i++) {
-        int M = MArrayp[i];
-        int K = KArrayp[i];
+        int matrixa_M = matrixa_M_array[i];
+        int matrixa_K = matrixa_K_array[i];
 
-        float *Matrixa = malloc(M * K * sizeof(float));
-        rand_fill_matrix_fp32(Matrixa, M, K);
-        float *correct = malloc(((M + 15) / 16) * 16 * K * sizeof(float));
-        float *answer = malloc(((M + 15) / 16) * 16 * K * sizeof(float));
-        // row_packa_output(M, K, Matrixa, correct);
+        float *matrixa = malloc(matrixa_M * matrixa_K * sizeof(float));
+        rand_fill_matrix_fp32(matrixa, matrixa_M, matrixa_K);
+        float *correct = malloc(((matrixa_M + 15) / 16) * 16 * matrixa_K * sizeof(float));
+        float *answer = malloc(((matrixa_M + 15) / 16) * 16 * matrixa_K * sizeof(float));
+        row_packa_output(matrixa_M, matrixa_K, matrixa, correct);
 
-        TestBufferSubMatrixAAndTranspose(M, K, Matrixa, answer);
+        test_buffer_transpose_submatrixa(matrixa_M, matrixa_K, matrixa, answer);
 
-        int size = ((M + 15) / 16) * 16 * K;
+        int size = ((matrixa_M + 15) / 16) * 16 * matrixa_K;
         int all_match = 1;
         for (int j = 0; j < size; j++) {
             if (fabsf(correct[j] - answer[j]) > 1e-8f) {
@@ -63,12 +64,12 @@ int UnitTest4TestBufferSubMatrixAAndTranspose() {
             }
         }
         if (all_match) {
-            free(Matrixa);
+            free(matrixa);
             free(correct);
             free(answer);
         } else {
             pass = 0;
-            free(Matrixa);
+            free(matrixa);
             free(correct);
             free(answer);
             printf("fail at test %d\n", i);
@@ -82,20 +83,20 @@ int UnitTest4TestBufferSubMatrixAAndTranspose() {
     exit(0);
 }
 
-static double run_blas_sgemm(int M, int N, int K, float *A, float *B, float *C) {
-    memset(C, 0, M * N * sizeof(float));
+static double run_blas_sgemm(int matrixa_M, int N, int matrixa_K, float *A, float *B, float *C) {
+    memset(C, 0, matrixa_M * N * sizeof(float));
     double start = dClock();
 #if defined(MAC) || defined(LS)
-    cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, M, N, K, 1.0f, A, K, B, N, 0.0f, C, N);
+    cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, matrixa_M, N, matrixa_K, 1.0f, A, matrixa_K, B, N, 0.0f, C, N);
 #endif
     double end = dClock();
     return end - start;
 }
 
-static double run_sme_sgemm(int M, int N, int K, float *A, float *B, float *C) {
-    memset(C, 0, M * N * sizeof(float));
+static double run_sme_sgemm(int matrixa_M, int N, int matrixa_K, float *A, float *B, float *C) {
+    memset(C, 0, matrixa_M * N * sizeof(float));
     double start = dClock();
-    sme_fp32_gemm(M, N, K, A, B, C);
+    sme_fp32_gemm(matrixa_M, N, matrixa_K, A, B, C);
     double end = dClock();
     return end - start;
 }
@@ -110,10 +111,10 @@ static int verify_results(int size, float *ref, float *test) {
     return 1;
 }
 
-static void bench_group(const char *label, int n, int M[], int N[], int K[], double speedups[]) {
+static void bench_group(const char *label, int n, int matrixa_M[], int N[], int matrixa_K[], double speedups[]) {
     printf("\n=== %s (n=%d) ===\n", label, n);
     for (int i = 0; i < n; i++) {
-        int m = M[i], nn = N[i], k = K[i];
+        int m = matrixa_M[i], nn = N[i], k = matrixa_K[i];
         float *A = malloc(m * k * sizeof(float));
         float *B = malloc(k * nn * sizeof(float));
         float *C_blas = malloc(m * nn * sizeof(float));
@@ -127,7 +128,7 @@ static void bench_group(const char *label, int n, int M[], int N[], int K[], dou
         int match = verify_results(m * nn, C_blas, C_sme);
         speedups[i] = blas_time / sme_time;
 
-        printf("  [%2d] M=%-5d N=%-5d K=%-5d  BLAS=%.4fs  SME=%.4fs  "
+        printf("  [%2d] matrixa_M=%-5d N=%-5d matrixa_K=%-5d  BLAS=%.4fs  SME=%.4fs  "
                "speedup=%.3fx  %s\n",
                i, m, nn, k, blas_time, sme_time, speedups[i], match ? "PASS" : "FAIL");
 
@@ -150,7 +151,7 @@ static void compute_mean_var(double *data, int n, double *mean, double *var) {
     *var = sq_sum / n;
 }
 
-int UnitTest4SmeFp32Gemm() {
+int unitest_sme_fp32_gemm() {
 #if !defined(MAC) && !defined(LS)
     printf("No BLAS library available. Define MAC or LS to enable benchmark.\n");
     exit(1);
@@ -186,6 +187,10 @@ int UnitTest4SmeFp32Gemm() {
     exit(0);
 }
 int UnitTest() {
-    UnitTest4SmeFp32Gemm();
+
+    // unitest_buffer_transpose_submatrixa();
+
+    unitest_sme_fp32_gemm();
+
     exit(0);
 }

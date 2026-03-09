@@ -11,12 +11,12 @@
 #include "kblas.h"
 #endif
 
-void raw_fp32_gemm(int M, int N, int K, float *Matrixa, float *Matrixb, float *Matrixc) {
+void raw_fp32_gemm(int matrixa_M, int matrixb_N, int matrixa_K, float *matrixa, float *matrixb, float *Matrixc) {
 
-    for (int i = 0; i < M; i++) {
-        for (int j = 0; j < N; j++) {
-            for (int k = 0; k < K; k++) {
-                Matrixc[i * N + j] += Matrixa[i * K + k] * Matrixb[k * N + j];
+    for (int i = 0; i < matrixa_M; i++) {
+        for (int j = 0; j < matrixb_N; j++) {
+            for (int k = 0; k < matrixa_K; k++) {
+                Matrixc[i * matrixb_N + j] += matrixa[i * matrixa_K + k] * matrixb[k * matrixb_N + j];
             }
         }
     }
@@ -24,44 +24,45 @@ void raw_fp32_gemm(int M, int N, int K, float *Matrixa, float *Matrixb, float *M
 
 int main() {
 
-    double start, end;
+    double start_time, end_time;
 
-    // int M = 16, N = 16, K = 64;
-    int M = 1024, N = 2048, K = 2048;
+    // int matrixa_M = 16, matrixb_N = 16, matrixa_K = 64;
+    int matrixa_M = 1024, matrixb_N = 2048, matrixa_K = 2048;
 
-    float *Matrixa = (float *)malloc(M * K * sizeof(float));
-    float *Matrixb = (float *)malloc(K * N * sizeof(float));
-    rand_fill_matrix_fp32(Matrixa, M, K);
-    rand_fill_matrix_fp32(Matrixb, K, N);
+    float *matrixa = (float *)malloc(matrixa_M * matrixa_K * sizeof(float));
+    float *matrixb = (float *)malloc(matrixa_K * matrixb_N * sizeof(float));
+    rand_fill_matrix_fp32(matrixa, matrixa_M, matrixa_K);
+    rand_fill_matrix_fp32(matrixb, matrixa_K, matrixb_N);
 
-    float *MatrixcRawFP32Gemm = (float *)malloc(M * N * sizeof(float));
-    memset(MatrixcRawFP32Gemm, 0.0, M * N * sizeof(float));
-    start = dClock();
-    raw_fp32_gemm(M, N, K, Matrixa, Matrixb, MatrixcRawFP32Gemm);
-    end = dClock();
-    double raw_time = end - start;
+    float *raw_fp32_gemm_matrixc = (float *)malloc(matrixa_M * matrixb_N * sizeof(float));
+    memset(raw_fp32_gemm_matrixc, 0.0, matrixa_M * matrixb_N * sizeof(float));
+    start_time = dClock();
+    raw_fp32_gemm(matrixa_M, matrixb_N, matrixa_K, matrixa, matrixb, raw_fp32_gemm_matrixc);
+    end_time = dClock();
+    double raw_time = end_time - start_time;
     printf("Raw FP32 GEMM time: %f seconds\n", raw_time);
 
-    float *MatrixcSMEFP32Gemm = (float *)malloc(M * N * sizeof(float));
-    memset(MatrixcSMEFP32Gemm, 0.0, M * N * sizeof(float));
-    start = dClock();
-    sme_fp32_gemm(M, N, K, Matrixa, Matrixb, MatrixcSMEFP32Gemm);
-    end = dClock();
-    double sme_time = end - start;
+    float *sme_fp32_gemm_matrixc = (float *)malloc(matrixa_M * matrixb_N * sizeof(float));
+    memset(sme_fp32_gemm_matrixc, 0.0, matrixa_M * matrixb_N * sizeof(float));
+    start_time = dClock();
+    sme_fp32_gemm(matrixa_M, matrixb_N, matrixa_K, matrixa, matrixb, sme_fp32_gemm_matrixc);
+    end_time = dClock();
+    double sme_time = end_time - start_time;
     printf("SME FP32 GEMM time: %f seconds\n", sme_time);
     int mismatch = 0;
 #ifdef MAC
-    float *MatrixBlas = (float *)malloc(M * N * sizeof(float));
+    float *blas_matrix = (float *)malloc(matrixa_M * matrixb_N * sizeof(float));
     BLASSetThreading(BLAS_THREADING_SINGLE_THREADED);
-    start = dClock();
-    cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, M, N, K, 1.0f, Matrixa, K, Matrixb, N, 0.0f, MatrixBlas, N);
-    end = dClock();
-    double cblas_time = end - start;
+    start_time = dClock();
+    cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, matrixa_M, matrixb_N, matrixa_K, 1.0f, matrixa, matrixa_K, matrixb,
+                matrixb_N, 0.0f, blas_matrix, matrixb_N);
+    end_time = dClock();
+    double cblas_time = end_time - start_time;
     printf("BLAS FP32 GEMM time: %f seconds\n", cblas_time);
 
-    for (int i = 0; i < M * N; i++) {
-        if (fabsf(MatrixBlas[i] - MatrixcSMEFP32Gemm[i]) > 1e-3f) {
-            printf("BLAS vs SME mismatch at index %d: blas=%f, sme=%f\n", i, MatrixBlas[i], MatrixcSMEFP32Gemm[i]);
+    for (int i = 0; i < matrixa_M * matrixb_N; i++) {
+        if (fabsf(blas_matrix[i] - sme_fp32_gemm_matrixc[i]) > 1e-3f) {
+            printf("BLAS vs SME mismatch at index %d: blas=%f, sme=%f\n", i, blas_matrix[i], sme_fp32_gemm_matrixc[i]);
             mismatch = 1;
             break;
         }
@@ -70,19 +71,20 @@ int main() {
         printf("BLAS vs SME: all elements match!\n");
     }
 
-    free(MatrixBlas);
+    free(blas_matrix);
 #elif defined(LS)
-    float *MatrixKBlas = (float *)malloc(M * N * sizeof(float));
-    memset(MatrixKBlas, 0, M * N * sizeof(float));
-    start = dClock();
-    cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, M, N, K, 1.0f, Matrixa, K, Matrixb, N, 0.0f, MatrixKBlas, N);
-    end = dClock();
-    double kblas_time = end - start;
+    float *MatrixKBlas = (float *)malloc(matrixa_M * matrixb_N * sizeof(float));
+    memset(MatrixKBlas, 0, matrixa_M * matrixb_N * sizeof(float));
+    start_time = dClock();
+    cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, matrixa_M, matrixb_N, matrixa_K, 1.0f, matrixa, matrixa_K, matrixb,
+                matrixb_N, 0.0f, MatrixKBlas, matrixb_N);
+    end_time = dClock();
+    double kblas_time = end_time - start_time;
     printf("BLAS FP32 GEMM time: %f seconds\n", kblas_time);
 
-    for (int i = 0; i < M * N; i++) {
-        if (fabsf(MatrixKBlas[i] - MatrixcSMEFP32Gemm[i]) > 1e-3f) {
-            printf("BLAS vs SME mismatch at index %d: blas=%f, sme=%f\n", i, MatrixKBlas[i], MatrixcSMEFP32Gemm[i]);
+    for (int i = 0; i < matrixa_M * matrixb_N; i++) {
+        if (fabsf(MatrixKBlas[i] - sme_fp32_gemm_matrixc[i]) > 1e-3f) {
+            printf("BLAS vs SME mismatch at index %d: blas=%f, sme=%f\n", i, MatrixKBlas[i], sme_fp32_gemm_matrixc[i]);
             mismatch = 1;
             break;
         }
@@ -94,21 +96,21 @@ int main() {
     free(MatrixKBlas);
 #endif
 
-    for (int i = 0; i < M * N; i++) {
-        if (fabsf(MatrixcRawFP32Gemm[i] - MatrixcSMEFP32Gemm[i]) > 1e-3f) {
-            printf("Mismatch at index %d: raw=%f, sme=%f\n", i, MatrixcRawFP32Gemm[i], MatrixcSMEFP32Gemm[i]);
+    for (int i = 0; i < matrixa_M * matrixb_N; i++) {
+        if (fabsf(raw_fp32_gemm_matrixc[i] - sme_fp32_gemm_matrixc[i]) > 1e-3f) {
+            printf("Mismatch at index %d: raw=%f, sme=%f\n", i, raw_fp32_gemm_matrixc[i], sme_fp32_gemm_matrixc[i]);
             mismatch = 1;
             break;
         }
     }
     if (!mismatch) {
-        printf("All elements match! (M=%d, N=%d, K=%d)\n", M, N, K);
+        printf("All elements match! (matrixa_M=%d, matrixb_N=%d, matrixa_K=%d)\n", matrixa_M, matrixb_N, matrixa_K);
         // printf("Speedup: %f\n", raw_time / sme_time);
     }
 
-    free(Matrixa);
-    free(Matrixb);
-    free(MatrixcRawFP32Gemm);
-    free(MatrixcSMEFP32Gemm);
+    free(matrixa);
+    free(matrixb);
+    free(raw_fp32_gemm_matrixc);
+    free(sme_fp32_gemm_matrixc);
     return 0;
 }

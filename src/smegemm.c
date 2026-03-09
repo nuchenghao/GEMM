@@ -6,46 +6,66 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-__attribute__((target("+sme+nosme2"))) __arm_locally_streaming __arm_new("za") void BufferSubMatrixAAndTranspose(
-    int Submatrixa_M, int Submatrixa_K, int K, float *Matrixa, float *MatrixaTileBuffer) {
-    int CntIn32OfSVL = svcntw();
-    int CntIn32OfSVL4 = CntIn32OfSVL * 4;
-    int ZASize = CntIn32OfSVL * CntIn32OfSVL;
-    int ZASize2 = ZASize * 2;
-    int ZASize3 = ZASize * 3;
-    float *CurrentMatrixaTileBuffer = MatrixaTileBuffer;
-    float *CurrentMatrixa = Matrixa;
+__attribute__((target("+sme+nosme2"))) __arm_locally_streaming __arm_new("za") void buffer_transpose_submatrixa(
+    int submatrixa_M, int submatrixa_K, int matrixa_K, float *p2_submatrixa, float *matrixa_tile_buffer) {
+    int svl_w_cnt = svcntw();
+    int svl_w_cnt_x2 = svl_w_cnt * 2;
+    int svl_w_cnt_x3 = svl_w_cnt * 3;
+    int svl_w_cnt_x4 = svl_w_cnt * 4;
+    int ZA_tile_size = svl_w_cnt * svl_w_cnt;
+    int ZA_tile_size_X2 = ZA_tile_size * 2;
+    int ZA_tile_size_X3 = ZA_tile_size * 3;
+    int ZA_tile_size_X4 = ZA_tile_size * 4;
+    int svl_w_cnt_X_submatrixa_K = svl_w_cnt * submatrixa_K;
+    int svl_w_cnt_X_matrixa_K = svl_w_cnt * matrixa_K;
+    float *p2_current_submatrixa = p2_submatrixa;
+    float *aux_p2_current_submatrixa_row = NULL;
+    float *aux_p2_current_submatrixa_col = NULL;
+    float *p2_current_matrixa_tile_buffer = matrixa_tile_buffer;
+    float *aux_p2_current_matrixa_tile_buffer = NULL;
     svbool_t PTrue = svptrue_b32();
-    for (int Submatixa_MI = 0; Submatixa_MI < Submatrixa_M; Submatixa_MI += CntIn32OfSVL) {
-        for (int Submatrixa_KI = 0; Submatrixa_KI < Submatrixa_K; Submatrixa_KI += CntIn32OfSVL4) {
-            svbool_t POf16Rows = svwhilelt_b32(0, min(CntIn32OfSVL, Submatrixa_M - Submatixa_MI));
-            svbool_t POfTile0 = svwhilelt_b32(0, min(CntIn32OfSVL, max(Submatrixa_K - Submatrixa_KI, 0)));
-            svbool_t POfTile1 = svwhilelt_b32(0, min(CntIn32OfSVL, max(Submatrixa_K - Submatrixa_KI - CntIn32OfSVL, 0)));
-            svbool_t POfTile2 = svwhilelt_b32(0, min(CntIn32OfSVL, max(Submatrixa_K - Submatrixa_KI - CntIn32OfSVL * 2, 0)));
-            svbool_t POfTile3 = svwhilelt_b32(0, min(CntIn32OfSVL, max(Submatrixa_K - Submatrixa_KI - CntIn32OfSVL * 3, 0)));
-            float *Current416Matrix = Matrixa + Submatixa_MI * K + Submatrixa_KI;
-            float *Current416MatrixTileBuffer = MatrixaTileBuffer + Submatixa_MI * Submatrixa_K + Submatrixa_KI * CntIn32OfSVL;
-            for (int rowi = 0; rowi < CntIn32OfSVL; ++rowi) {
+
+    for (int submatrixa_M_idx = 0; submatrixa_M_idx < submatrixa_M; submatrixa_M_idx += svl_w_cnt) {
+
+        aux_p2_current_submatrixa_col = p2_current_submatrixa;
+        aux_p2_current_matrixa_tile_buffer = p2_current_matrixa_tile_buffer;
+        for (int submatrixa_K_idx = 0; submatrixa_K_idx < submatrixa_K; submatrixa_K_idx += svl_w_cnt_x4) {
+
+            aux_p2_current_submatrixa_row = aux_p2_current_submatrixa_col;
+
+            svbool_t POf16Rows = svwhilelt_b32(0, submatrixa_M - submatrixa_M_idx);
+            svbool_t POfTile0 = svwhilelt_b32(0, submatrixa_K - submatrixa_K_idx);
+            svbool_t POfTile1 = svwhilelt_b32(0, submatrixa_K - submatrixa_K_idx - svl_w_cnt);
+            svbool_t POfTile2 = svwhilelt_b32(0, submatrixa_K - submatrixa_K_idx - svl_w_cnt_x2);
+            svbool_t POfTile3 = svwhilelt_b32(0, submatrixa_K - submatrixa_K_idx - svl_w_cnt_x3);
+
+            for (int rowi = 0; rowi < svl_w_cnt; ++rowi) {
                 svbool_t POfCurrentColumn0 = svpsel_lane_b32(POfTile0, POf16Rows, rowi);
                 svbool_t POfCurrentColumn1 = svpsel_lane_b32(POfTile1, POf16Rows, rowi);
                 svbool_t POfCurrentColumn2 = svpsel_lane_b32(POfTile2, POf16Rows, rowi);
                 svbool_t POfCurrentColumn3 = svpsel_lane_b32(POfTile3, POf16Rows, rowi);
-                svld1_hor_za32(0, rowi, POfCurrentColumn0, Current416Matrix + rowi * K);
-                svld1_hor_za32(1, rowi, POfCurrentColumn1, Current416Matrix + rowi * K + CntIn32OfSVL);
-                svld1_hor_za32(2, rowi, POfCurrentColumn2, Current416Matrix + rowi * K + CntIn32OfSVL * 2);
-                svld1_hor_za32(3, rowi, POfCurrentColumn3, Current416Matrix + rowi * K + CntIn32OfSVL * 3);
+                svld1_hor_za32(0, rowi, POfCurrentColumn0, aux_p2_current_submatrixa_row);
+                svld1_hor_za32(1, rowi, POfCurrentColumn1, aux_p2_current_submatrixa_row + svl_w_cnt);
+                svld1_hor_za32(2, rowi, POfCurrentColumn2, aux_p2_current_submatrixa_row + svl_w_cnt_x2);
+                svld1_hor_za32(3, rowi, POfCurrentColumn3, aux_p2_current_submatrixa_row + svl_w_cnt_x3);
+                aux_p2_current_submatrixa_row += matrixa_K;
             }
-            for (int coli = 0; coli < CntIn32OfSVL; ++coli) {
+            for (int coli = 0; coli < svl_w_cnt; ++coli) {
                 svbool_t POfCurrentColumn0 = svpsel_lane_b32(PTrue, POfTile0, coli);
                 svbool_t POfCurrentColumn1 = svpsel_lane_b32(PTrue, POfTile1, coli);
                 svbool_t POfCurrentColumn2 = svpsel_lane_b32(PTrue, POfTile2, coli);
                 svbool_t POfCurrentColumn3 = svpsel_lane_b32(PTrue, POfTile3, coli);
-                svst1_ver_za32(0, coli, POfCurrentColumn0, Current416MatrixTileBuffer + coli * CntIn32OfSVL);
-                svst1_ver_za32(1, coli, POfCurrentColumn1, Current416MatrixTileBuffer + coli * CntIn32OfSVL + ZASize);
-                svst1_ver_za32(2, coli, POfCurrentColumn2, Current416MatrixTileBuffer + coli * CntIn32OfSVL + ZASize2);
-                svst1_ver_za32(3, coli, POfCurrentColumn3, Current416MatrixTileBuffer + coli * CntIn32OfSVL + ZASize3);
+                svst1_ver_za32(0, coli, POfCurrentColumn0, aux_p2_current_matrixa_tile_buffer);
+                svst1_ver_za32(1, coli, POfCurrentColumn1, aux_p2_current_matrixa_tile_buffer + ZA_tile_size);
+                svst1_ver_za32(2, coli, POfCurrentColumn2, aux_p2_current_matrixa_tile_buffer + ZA_tile_size_X2);
+                svst1_ver_za32(3, coli, POfCurrentColumn3, aux_p2_current_matrixa_tile_buffer + ZA_tile_size_X3);
+                aux_p2_current_matrixa_tile_buffer += svl_w_cnt;
             }
+            aux_p2_current_matrixa_tile_buffer += ZA_tile_size_X3;
+            aux_p2_current_submatrixa_col += svl_w_cnt_x4;
         }
+        p2_current_matrixa_tile_buffer += svl_w_cnt_X_submatrixa_K;
+        p2_current_submatrixa += svl_w_cnt_X_matrixa_K;
     }
 }
 
@@ -89,8 +109,8 @@ void sme_fp32_gemm(int Matrixa_M, int Matrixb_N, int Matrixa_K, float *Matrixa, 
         int Submatrixa_M = min(Submatrix_M, Matrixa_M - Matrixa_MI);
         for (int Matrixa_KI = 0; Matrixa_KI < Matrixa_K; Matrixa_KI += Submatrix_K) {
             int Submatrixa_K = min(Submatrix_K, Matrixa_K - Matrixa_KI);
-            BufferSubMatrixAAndTranspose(Submatrixa_M, Submatrixa_K, Matrixa_K, &Matrixa[Matrixa_MI * Matrixa_K + Matrixa_KI],
-                                         MatrixaTileBuffer);
+            buffer_transpose_submatrixa(Submatrixa_M, Submatrixa_K, Matrixa_K, &Matrixa[Matrixa_MI * Matrixa_K + Matrixa_KI],
+                                        MatrixaTileBuffer);
             for (int Matrixb_NI = 0; Matrixb_NI < Matrixb_N; Matrixb_NI += Submatrix_N) {
                 int Submatrixb_N = min(Submatrix_N, Matrixb_N - Matrixb_NI);
                 FP32SubmatrixSMEMM(Matrixa_M, Matrixb_N, Matrixa_K, Submatrixa_M, Submatrixb_N, Submatrixa_K, MatrixaTileBuffer,
