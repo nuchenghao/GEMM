@@ -17,15 +17,15 @@ void buffer_transpose_submatrixa(int Submatrixa_M, int Submatrixa_K, int matrixa
 
 static void test_buffer_transpose_submatrixa(int matrixa_M, int matrixa_K, float *matrixa, float *result) {
     float *restrict atilde_buffer;
-    posix_memalign((void **)&atilde_buffer, SME_CACHELINE_SIZE, Submatrix_M * Submatrix_K * sizeof(float));
+    posix_memalign((void **)&atilde_buffer, SME_CACHELINE_SIZE, SUBMATRIX_M * SUBMATRIX_K * sizeof(float));
 
     int total = 0;
-    for (int mi = 0; mi < matrixa_M; mi += Submatrix_M) {
-        int Submatrixa_M = min(Submatrix_M, matrixa_M - mi);
+    for (int mi = 0; mi < matrixa_M; mi += SUBMATRIX_M) {
+        int Submatrixa_M = min(SUBMATRIX_M, matrixa_M - mi);
 
-        for (int ki = 0; ki < matrixa_K; ki += Submatrix_K) {
+        for (int ki = 0; ki < matrixa_K; ki += SUBMATRIX_K) {
 
-            int Submatrixa_K = min(Submatrix_K, matrixa_K - ki);
+            int Submatrixa_K = min(SUBMATRIX_K, matrixa_K - ki);
             buffer_transpose_submatrixa(Submatrixa_M, Submatrixa_K, matrixa_K, (uint32_t *)&matrixa[mi * matrixa_K + ki],
                                         (uint32_t *)atilde_buffer);
 
