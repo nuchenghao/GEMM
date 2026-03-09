@@ -7,9 +7,9 @@
 
 #define SME_CACHELINE_SIZE 128
 
-#define Submatrix_M 512
-#define Submatrix_K 1024
-#define Submatrix_N 256
+#define SUBMATRIX_M 512
+#define SUBMATRIX_K 1024
+#define SUBMATRIX_N 256
 
 void sme_fp32_gemm(int M, int N, int K, float *Matrixa, float *Matrixb, float *Matrixc);
 #endif
