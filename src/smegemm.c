@@ -192,30 +192,42 @@ __attribute__((target("+sme+nosme2"))) __arm_locally_streaming __arm_new("za") v
     }
 }
 
+#define SUBMATRIX_M 512
+#define SUBMATRIX_K 1024
+#define SUBMATRIX_N 256
+
 void sme_fp32_gemm(int matrixa_M, int matrixb_N, int matrixa_K, float *matrixa, float *matrixb, float *matrixc) {
     float *restrict matrixa_tile_buffer;
     float *restrict matrixb_tile_buffer;
+    float *current_matrixa = NULL;
+    float *current_matrixb = matrixb;
+    float *aux_current_matrixb = NULL;
+    float *current_matrixc = NULL;
     posix_memalign((void **)&matrixa_tile_buffer, SME_CACHELINE_SIZE, SUBMATRIX_M * SUBMATRIX_K * sizeof(float));
-    posix_memalign((void **)&matrixb_tile_buffer, SME_CACHELINE_SIZE, SUBMATRIX_M * SUBMATRIX_K * sizeof(float));
-
-    for (int matrixa_M_idx = 0; matrixa_M_idx < matrixa_M; matrixa_M_idx += SUBMATRIX_M) {
+    posix_memalign((void **)&matrixb_tile_buffer, SME_CACHELINE_SIZE, SUBMATRIX_K * SUBMATRIX_N * sizeof(float));
+    for (int matrixa_M_idx = 0; matrixa_M_idx < matrixa_M; matrixa_M_idx += SUBMATRIX_M, matrixa += SUBMATRIX_M * matrixa_K,
+             matrixc += SUBMATRIX_M * matrixb_N, current_matrixb = matrixb) {
+        current_matrixa = matrixa;
+        current_matrixc = matrixc;
 
         int submatrixa_M = min(SUBMATRIX_M, matrixa_M - matrixa_M_idx);
 
-        for (int Matrixa_KI = 0; Matrixa_KI < matrixa_K; Matrixa_KI += SUBMATRIX_K) {
+        for (int Matrixa_KI = 0; Matrixa_KI < matrixa_K;
+             Matrixa_KI += SUBMATRIX_K, current_matrixc = matrixc, current_matrixb += SUBMATRIX_K * matrixb_N) {
 
             int submatrixa_K = min(SUBMATRIX_K, matrixa_K - Matrixa_KI);
 
-            buffer_transpose_submatrixa(submatrixa_M, submatrixa_K, matrixa_K, &matrixa[matrixa_M_idx * matrixa_K + Matrixa_KI],
-                                        matrixa_tile_buffer);
-            for (int matrixb_N_idx = 0; matrixb_N_idx < matrixb_N; matrixb_N_idx += SUBMATRIX_N) {
+            buffer_transpose_submatrixa(submatrixa_M, submatrixa_K, matrixa_K, current_matrixa, matrixa_tile_buffer);
+            aux_current_matrixb = current_matrixb;
+            for (int matrixb_N_idx = 0; matrixb_N_idx < matrixb_N;
+                 matrixb_N_idx += SUBMATRIX_N, current_matrixc += SUBMATRIX_N, aux_current_matrixb += SUBMATRIX_N) {
 
                 int submatrixb_N = min(SUBMATRIX_N, matrixb_N - matrixb_N_idx);
 
                 fp32_sme_submatrix_mm(matrixa_M, matrixb_N, matrixa_K, submatrixa_M, submatrixb_N, submatrixa_K,
-                                      matrixa_tile_buffer, matrixb_tile_buffer, matrixb + Matrixa_KI * matrixb_N + matrixb_N_idx,
-                                      matrixc + matrixa_M_idx * matrixb_N + matrixb_N_idx);
+                                      matrixa_tile_buffer, matrixb_tile_buffer, aux_current_matrixb, current_matrixc);
             }
+            current_matrixa += submatrixa_K;
         }
     }
     free(matrixa_tile_buffer);

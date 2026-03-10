@@ -27,7 +27,7 @@ int main() {
     double start_time, end_time;
 
     // int matrixa_M = 16, matrixb_N = 16, matrixa_K = 64;
-    int matrixa_M = 1024, matrixb_N = 40960, matrixa_K = 40960;
+    int matrixa_M = 78973, matrixb_N = 1, matrixa_K = 3571;
 
     float *matrixa = (float *)malloc(matrixa_M * matrixa_K * sizeof(float));
     float *matrixb = (float *)malloc(matrixa_K * matrixb_N * sizeof(float));
@@ -92,7 +92,7 @@ int main() {
     }
     if (!mismatch) {
         printf("BLAS vs SME: all elements match!\n");
-        printf("Speedup: %f\n", cblas_time / sme_time);
+        printf("Speedup: %f\n", kblas_time / sme_time);
     }
 
     free(MatrixKBlas);

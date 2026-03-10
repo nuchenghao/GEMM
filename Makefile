@@ -20,8 +20,8 @@ else
   $(error Unknown TARGET "$(TARGET)". Use MAC or LS)
 endif
 
-CFLAGS += -O3 -fno-stack-protector -march=$(MARCH) -Iinclude
-ASMFLAGS = -O3 -fno-stack-protector -march=$(MARCH) -Iinclude
+CFLAGS += -O3 -fno-stack-protector -march=$(MARCH) -Iinclude -g
+ASMFLAGS = -O3 -fno-stack-protector -march=$(MARCH) -Iinclude -g
 
 DIR_BUILD = build
 DIR_EXEC = exec
