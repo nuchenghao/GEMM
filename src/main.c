@@ -27,7 +27,7 @@ int main() {
     double start_time, end_time;
 
     // int matrixa_M = 16, matrixb_N = 16, matrixa_K = 64;
-    int matrixa_M = 2560, matrixb_N = 4096, matrixa_K = 20480;
+    int matrixa_M = 1024, matrixb_N = 40960, matrixa_K = 40960;
 
     float *matrixa = (float *)malloc(matrixa_M * matrixa_K * sizeof(float));
     float *matrixb = (float *)malloc(matrixa_K * matrixb_N * sizeof(float));

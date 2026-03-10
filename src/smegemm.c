@@ -1,7 +1,5 @@
 #include "smegemm.h"
 #include "utils.h"
-#include <arm_sme.h>
-#include <arm_sve.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
