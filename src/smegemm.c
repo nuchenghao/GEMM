@@ -1,8 +1,5 @@
 #include "smegemm.h"
 #include "utils.h"
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 __attribute__((target("+sme+nosme2"))) __arm_locally_streaming __arm_new("za") void buffer_transpose_submatrixa(
     int submatrixa_M, int submatrixa_K, int matrixa_K, float *p2_submatrixa, float *matrixa_tile_buffer) {
@@ -82,57 +79,112 @@ __attribute__((target("+sme+nosme2"))) __arm_locally_streaming __arm_new("za") v
     float *aux_p2_submatrixb = NULL;
     float *current_p2_submatrixc = NULL;
     float *aux_p2_submatrixc = NULL;
+    float *current_p2_matrixb_tile_buffer = NULL;
     for (int submatixa_M_idx = 0; submatixa_M_idx < submatrixa_M; submatixa_M_idx += svl_w_cnt) {
         current_p2_submatrixa = matrixa_tile_buffer;
         current_p2_submatrixb = p2_submatrixb;
         current_p2_submatrixc = p2_submatrixc;
+        current_p2_matrixb_tile_buffer = matrixb_tile_buffer;
 
         svbool_t current_row_p = svwhilelt_b32(0, submatrixa_M - submatixa_M_idx);
 
-        for (int submatrixb_N_idx = 0; submatrixb_N_idx < submatrixb_N; submatrixb_N_idx += svl_w_cnt_X4,
-                 current_p2_submatrixc += svl_w_cnt_X4, current_p2_submatrixb += svl_w_cnt_X4,
-                 current_p2_submatrixa = matrixa_tile_buffer) {
-            svbool_t current_column0_p = svwhilelt_b32(0, submatrixb_N - submatrixb_N_idx);
-            svbool_t current_column1_p = svwhilelt_b32(0, submatrixb_N - submatrixb_N_idx - svl_w_cnt);
-            svbool_t current_column2_p = svwhilelt_b32(0, submatrixb_N - submatrixb_N_idx - svl_w_cnt_X2);
-            svbool_t current_column3_p = svwhilelt_b32(0, submatrixb_N - submatrixb_N_idx - svl_w_cnt_X3);
-            aux_p2_submatrixc = current_p2_submatrixc;
-            for (int load_matrixc_idx = 0; load_matrixc_idx < svl_w_cnt; ++load_matrixc_idx) {
-                svbool_t load_matrixc0_p = svpsel_lane_b32(current_column0_p, current_row_p, load_matrixc_idx);
-                svbool_t load_matrixc1_p = svpsel_lane_b32(current_column1_p, current_row_p, load_matrixc_idx);
-                svbool_t load_matrixc2_p = svpsel_lane_b32(current_column2_p, current_row_p, load_matrixc_idx);
-                svbool_t load_matrixc3_p = svpsel_lane_b32(current_column3_p, current_row_p, load_matrixc_idx);
-                svld1_hor_za32(0, load_matrixc_idx, load_matrixc0_p, aux_p2_submatrixc);
-                svld1_hor_za32(1, load_matrixc_idx, load_matrixc1_p, aux_p2_submatrixc + svl_w_cnt);
-                svld1_hor_za32(2, load_matrixc_idx, load_matrixc2_p, aux_p2_submatrixc + svl_w_cnt_X2);
-                svld1_hor_za32(3, load_matrixc_idx, load_matrixc3_p, aux_p2_submatrixc + svl_w_cnt_X3);
-                aux_p2_submatrixc += matrixb_N;
+        if (submatixa_M_idx != 0) {
+            for (int submatrixb_N_idx = 0; submatrixb_N_idx < submatrixb_N; submatrixb_N_idx += svl_w_cnt_X4,
+                     current_p2_submatrixc += svl_w_cnt_X4, current_p2_submatrixb += svl_w_cnt_X4,
+                     current_p2_submatrixa = matrixa_tile_buffer) {
+                svbool_t current_column0_p = svwhilelt_b32(0, submatrixb_N - submatrixb_N_idx);
+                svbool_t current_column1_p = svwhilelt_b32(0, submatrixb_N - submatrixb_N_idx - svl_w_cnt);
+                svbool_t current_column2_p = svwhilelt_b32(0, submatrixb_N - submatrixb_N_idx - svl_w_cnt_X2);
+                svbool_t current_column3_p = svwhilelt_b32(0, submatrixb_N - submatrixb_N_idx - svl_w_cnt_X3);
+                aux_p2_submatrixc = current_p2_submatrixc;
+                for (int load_matrixc_idx = 0; load_matrixc_idx < svl_w_cnt; ++load_matrixc_idx) {
+                    svbool_t load_matrixc0_p = svpsel_lane_b32(current_column0_p, current_row_p, load_matrixc_idx);
+                    svbool_t load_matrixc1_p = svpsel_lane_b32(current_column1_p, current_row_p, load_matrixc_idx);
+                    svbool_t load_matrixc2_p = svpsel_lane_b32(current_column2_p, current_row_p, load_matrixc_idx);
+                    svbool_t load_matrixc3_p = svpsel_lane_b32(current_column3_p, current_row_p, load_matrixc_idx);
+                    svld1_hor_za32(0, load_matrixc_idx, load_matrixc0_p, aux_p2_submatrixc);
+                    svld1_hor_za32(1, load_matrixc_idx, load_matrixc1_p, aux_p2_submatrixc + svl_w_cnt);
+                    svld1_hor_za32(2, load_matrixc_idx, load_matrixc2_p, aux_p2_submatrixc + svl_w_cnt_X2);
+                    svld1_hor_za32(3, load_matrixc_idx, load_matrixc3_p, aux_p2_submatrixc + svl_w_cnt_X3);
+                    aux_p2_submatrixc += matrixb_N;
+                }
+                for (int submatrixa_K_idx = 0; submatrixa_K_idx < submatrixa_K; ++submatrixa_K_idx) {
+                    svfloat32_t submatrixa_Z = svld1_f32(current_row_p, current_p2_submatrixa);
+                    svfloat32_t submatrixb_Z0 = svld1_f32(current_column0_p, current_p2_matrixb_tile_buffer);
+                    svfloat32_t submatrixb_Z1 = svld1_f32(current_column1_p, current_p2_matrixb_tile_buffer + svl_w_cnt);
+                    svfloat32_t submatrixb_Z2 = svld1_f32(current_column2_p, current_p2_matrixb_tile_buffer + svl_w_cnt_X2);
+                    svfloat32_t submatrixb_Z3 = svld1_f32(current_column3_p, current_p2_matrixb_tile_buffer + svl_w_cnt_X3);
+                    svmopa_za32_f32_m(0, current_row_p, current_column0_p, submatrixa_Z, submatrixb_Z0);
+                    svmopa_za32_f32_m(1, current_row_p, current_column1_p, submatrixa_Z, submatrixb_Z1);
+                    svmopa_za32_f32_m(2, current_row_p, current_column2_p, submatrixa_Z, submatrixb_Z2);
+                    svmopa_za32_f32_m(3, current_row_p, current_column3_p, submatrixa_Z, submatrixb_Z3);
+                    current_p2_matrixb_tile_buffer += svl_w_cnt_X4;
+                    current_p2_submatrixa += svl_w_cnt;
+                }
+                aux_p2_submatrixc = current_p2_submatrixc;
+                for (int load_matrixc_idx = 0; load_matrixc_idx < svl_w_cnt; ++load_matrixc_idx) {
+                    svbool_t store_matrixc0_p = svpsel_lane_b32(current_column0_p, current_row_p, load_matrixc_idx);
+                    svbool_t store_matrixc1_p = svpsel_lane_b32(current_column1_p, current_row_p, load_matrixc_idx);
+                    svbool_t store_matrixc2_p = svpsel_lane_b32(current_column2_p, current_row_p, load_matrixc_idx);
+                    svbool_t store_matrixc3_p = svpsel_lane_b32(current_column3_p, current_row_p, load_matrixc_idx);
+                    svst1_hor_za32(0, load_matrixc_idx, store_matrixc0_p, aux_p2_submatrixc);
+                    svst1_hor_za32(1, load_matrixc_idx, store_matrixc1_p, aux_p2_submatrixc + svl_w_cnt);
+                    svst1_hor_za32(2, load_matrixc_idx, store_matrixc2_p, aux_p2_submatrixc + svl_w_cnt_X2);
+                    svst1_hor_za32(3, load_matrixc_idx, store_matrixc3_p, aux_p2_submatrixc + svl_w_cnt_X3);
+                    aux_p2_submatrixc += matrixb_N;
+                }
             }
-            aux_p2_submatrixb = current_p2_submatrixb;
-            for (int submatrixa_K_idx = 0; submatrixa_K_idx < submatrixa_K; ++submatrixa_K_idx) {
-                svfloat32_t submatrixa_Z = svld1_f32(current_row_p, current_p2_submatrixa);
-                svfloat32_t submatrixb_Z0 = svld1_f32(current_column0_p, aux_p2_submatrixb);
-                svfloat32_t submatrixb_Z1 = svld1_f32(current_column1_p, aux_p2_submatrixb + svl_w_cnt);
-                svfloat32_t submatrixb_Z2 = svld1_f32(current_column2_p, aux_p2_submatrixb + svl_w_cnt_X2);
-                svfloat32_t submatrixb_Z3 = svld1_f32(current_column3_p, aux_p2_submatrixb + svl_w_cnt_X3);
-                svmopa_za32_f32_m(0, current_row_p, current_column0_p, submatrixa_Z, submatrixb_Z0);
-                svmopa_za32_f32_m(1, current_row_p, current_column1_p, submatrixa_Z, submatrixb_Z1);
-                svmopa_za32_f32_m(2, current_row_p, current_column2_p, submatrixa_Z, submatrixb_Z2);
-                svmopa_za32_f32_m(3, current_row_p, current_column3_p, submatrixa_Z, submatrixb_Z3);
-                current_p2_submatrixa += svl_w_cnt;
-                aux_p2_submatrixb += matrixb_N;
-            }
-            aux_p2_submatrixc = current_p2_submatrixc;
-            for (int load_matrixc_idx = 0; load_matrixc_idx < svl_w_cnt; ++load_matrixc_idx) {
-                svbool_t store_matrixc0_p = svpsel_lane_b32(current_column0_p, current_row_p, load_matrixc_idx);
-                svbool_t store_matrixc1_p = svpsel_lane_b32(current_column1_p, current_row_p, load_matrixc_idx);
-                svbool_t store_matrixc2_p = svpsel_lane_b32(current_column2_p, current_row_p, load_matrixc_idx);
-                svbool_t store_matrixc3_p = svpsel_lane_b32(current_column3_p, current_row_p, load_matrixc_idx);
-                svst1_hor_za32(0, load_matrixc_idx, store_matrixc0_p, aux_p2_submatrixc);
-                svst1_hor_za32(1, load_matrixc_idx, store_matrixc1_p, aux_p2_submatrixc + svl_w_cnt);
-                svst1_hor_za32(2, load_matrixc_idx, store_matrixc2_p, aux_p2_submatrixc + svl_w_cnt_X2);
-                svst1_hor_za32(3, load_matrixc_idx, store_matrixc3_p, aux_p2_submatrixc + svl_w_cnt_X3);
-                aux_p2_submatrixc += matrixb_N;
+        } else {
+            for (int submatrixb_N_idx = 0; submatrixb_N_idx < submatrixb_N; submatrixb_N_idx += svl_w_cnt_X4,
+                     current_p2_submatrixc += svl_w_cnt_X4, current_p2_submatrixb += svl_w_cnt_X4,
+                     current_p2_submatrixa = matrixa_tile_buffer) {
+                svbool_t current_column0_p = svwhilelt_b32(0, submatrixb_N - submatrixb_N_idx);
+                svbool_t current_column1_p = svwhilelt_b32(0, submatrixb_N - submatrixb_N_idx - svl_w_cnt);
+                svbool_t current_column2_p = svwhilelt_b32(0, submatrixb_N - submatrixb_N_idx - svl_w_cnt_X2);
+                svbool_t current_column3_p = svwhilelt_b32(0, submatrixb_N - submatrixb_N_idx - svl_w_cnt_X3);
+                aux_p2_submatrixc = current_p2_submatrixc;
+                for (int load_matrixc_idx = 0; load_matrixc_idx < svl_w_cnt; ++load_matrixc_idx) {
+                    svbool_t load_matrixc0_p = svpsel_lane_b32(current_column0_p, current_row_p, load_matrixc_idx);
+                    svbool_t load_matrixc1_p = svpsel_lane_b32(current_column1_p, current_row_p, load_matrixc_idx);
+                    svbool_t load_matrixc2_p = svpsel_lane_b32(current_column2_p, current_row_p, load_matrixc_idx);
+                    svbool_t load_matrixc3_p = svpsel_lane_b32(current_column3_p, current_row_p, load_matrixc_idx);
+                    svld1_hor_za32(0, load_matrixc_idx, load_matrixc0_p, aux_p2_submatrixc);
+                    svld1_hor_za32(1, load_matrixc_idx, load_matrixc1_p, aux_p2_submatrixc + svl_w_cnt);
+                    svld1_hor_za32(2, load_matrixc_idx, load_matrixc2_p, aux_p2_submatrixc + svl_w_cnt_X2);
+                    svld1_hor_za32(3, load_matrixc_idx, load_matrixc3_p, aux_p2_submatrixc + svl_w_cnt_X3);
+                    aux_p2_submatrixc += matrixb_N;
+                }
+                aux_p2_submatrixb = current_p2_submatrixb;
+                for (int submatrixa_K_idx = 0; submatrixa_K_idx < submatrixa_K; ++submatrixa_K_idx) {
+                    svfloat32_t submatrixa_Z = svld1_f32(current_row_p, current_p2_submatrixa);
+                    svfloat32_t submatrixb_Z0 = svld1_f32(current_column0_p, aux_p2_submatrixb);
+                    svfloat32_t submatrixb_Z1 = svld1_f32(current_column1_p, aux_p2_submatrixb + svl_w_cnt);
+                    svfloat32_t submatrixb_Z2 = svld1_f32(current_column2_p, aux_p2_submatrixb + svl_w_cnt_X2);
+                    svfloat32_t submatrixb_Z3 = svld1_f32(current_column3_p, aux_p2_submatrixb + svl_w_cnt_X3);
+                    svmopa_za32_f32_m(0, current_row_p, current_column0_p, submatrixa_Z, submatrixb_Z0);
+                    svst1_f32(current_column0_p, current_p2_matrixb_tile_buffer, submatrixb_Z0);
+                    svmopa_za32_f32_m(1, current_row_p, current_column1_p, submatrixa_Z, submatrixb_Z1);
+                    svst1_f32(current_column1_p, current_p2_matrixb_tile_buffer + svl_w_cnt, submatrixb_Z1);
+                    svmopa_za32_f32_m(2, current_row_p, current_column2_p, submatrixa_Z, submatrixb_Z2);
+                    svst1_f32(current_column2_p, current_p2_matrixb_tile_buffer + svl_w_cnt_X2, submatrixb_Z2);
+                    svmopa_za32_f32_m(3, current_row_p, current_column3_p, submatrixa_Z, submatrixb_Z3);
+                    svst1_f32(current_column3_p, current_p2_matrixb_tile_buffer + svl_w_cnt_X3, submatrixb_Z3);
+                    current_p2_matrixb_tile_buffer += svl_w_cnt_X4;
+                    current_p2_submatrixa += svl_w_cnt;
+                    aux_p2_submatrixb += matrixb_N;
+                }
+                aux_p2_submatrixc = current_p2_submatrixc;
+                for (int load_matrixc_idx = 0; load_matrixc_idx < svl_w_cnt; ++load_matrixc_idx) {
+                    svbool_t store_matrixc0_p = svpsel_lane_b32(current_column0_p, current_row_p, load_matrixc_idx);
+                    svbool_t store_matrixc1_p = svpsel_lane_b32(current_column1_p, current_row_p, load_matrixc_idx);
+                    svbool_t store_matrixc2_p = svpsel_lane_b32(current_column2_p, current_row_p, load_matrixc_idx);
+                    svbool_t store_matrixc3_p = svpsel_lane_b32(current_column3_p, current_row_p, load_matrixc_idx);
+                    svst1_hor_za32(0, load_matrixc_idx, store_matrixc0_p, aux_p2_submatrixc);
+                    svst1_hor_za32(1, load_matrixc_idx, store_matrixc1_p, aux_p2_submatrixc + svl_w_cnt);
+                    svst1_hor_za32(2, load_matrixc_idx, store_matrixc2_p, aux_p2_submatrixc + svl_w_cnt_X2);
+                    svst1_hor_za32(3, load_matrixc_idx, store_matrixc3_p, aux_p2_submatrixc + svl_w_cnt_X3);
+                    aux_p2_submatrixc += matrixb_N;
+                }
             }
         }
         matrixa_tile_buffer += svl_w_cnt_X_submatrixa_K;

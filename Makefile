@@ -10,10 +10,12 @@ ifeq ($(TARGET),MAC)
   MARCH = armv9-a+nosve+sme
   CFLAGS += -DMAC -DACCELERATE_NEW_LAPACK
   LINKFLAGS += -framework Accelerate
+  ENTRY = _UnitTest
 else ifeq ($(TARGET),LS)
   MARCH = armv9-a+sve+sve2+sme
   CFLAGS += -DLS
   LINKFLAGS += -lkblas -lm
+  ENTRY = UnitTest
 else
   $(error Unknown TARGET "$(TARGET)". Use MAC or LS)
 endif
@@ -66,7 +68,7 @@ test: $(EXE_TEST)
 
 $(EXE_TEST): $(OBJ_FILES) $(patsubst test/%.c,$(DIR_BUILD)/%_c.o,$(wildcard test/*.c)) $(LIB_MATMUL)
 	mkdir -p $(@D)
-	$(CC) $(LINKFLAGS) -e _UnitTest -o $@ $^
+	$(CC) $(LINKFLAGS) -e $(ENTRY) -o $@ $^
 
 run:
 	@./$(EXE)

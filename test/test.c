@@ -7,11 +7,11 @@
 
 #ifdef MAC
 #include <Accelerate/Accelerate.h>
+void row_packa_output(int m, int k, float *XA, float *result);
 #elif defined(LS)
 #include "kblas.h"
 #endif
 
-void row_packa_output(int m, int k, float *XA, float *result);
 void buffer_transpose_submatrixa(int Submatrixa_M, int Submatrixa_K, int matrixa_K, uint32_t *matrixa,
                                  uint32_t *MatrixaTileBuffer);
 
@@ -50,8 +50,9 @@ int unitest_buffer_transpose_submatrixa() {
         rand_fill_matrix_fp32(matrixa, matrixa_M, matrixa_K);
         float *correct = malloc(((matrixa_M + 15) / 16) * 16 * matrixa_K * sizeof(float));
         float *answer = malloc(((matrixa_M + 15) / 16) * 16 * matrixa_K * sizeof(float));
+#ifdef MAC
         row_packa_output(matrixa_M, matrixa_K, matrixa, correct);
-
+#endif
         test_buffer_transpose_submatrixa(matrixa_M, matrixa_K, matrixa, answer);
 
         int size = ((matrixa_M + 15) / 16) * 16 * matrixa_K;
@@ -167,7 +168,7 @@ int unitest_sme_fp32_gemm() {
     int irr_N[] = {3114, 1272, 503, 2049, 997, 1533, 3571, 511, 78934, 4999, 34567, 9803};
     int irr_K[] = {503, 997, 127, 3117, 1533, 2049, 511, 3571, 1025, 7893, 13, 77};
 
-    double reg_speedups[10], irr_speedups[10];
+    double reg_speedups[N_TESTS], irr_speedups[N_TESTS];
     double mean, var;
 
     bench_group("Regular matrices", N_TESTS, reg_M, reg_N, reg_K, reg_speedups);
@@ -184,7 +185,7 @@ int unitest_sme_fp32_gemm() {
     compute_mean_var(irr_speedups, N_TESTS, &mean, &var);
     printf("  Irregular: speedup mean=%.4f  var=%.6f\n", mean, var);
 
-    exit(0);
+    return 0;
 }
 int UnitTest() {
 

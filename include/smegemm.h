@@ -1,7 +1,6 @@
 #ifndef SGEMM_H
 #define SGEMM_H
 
-#include "utils.h"
 #include <arm_sme.h>
 #include <stdint.h>
 
