@@ -192,10 +192,6 @@ __attribute__((target("+sme+nosme2"))) __arm_locally_streaming __arm_new("za") v
     }
 }
 
-#define SUBMATRIX_M 512
-#define SUBMATRIX_K 1024
-#define SUBMATRIX_N 256
-
 void sme_fp32_gemm(int matrixa_M, int matrixb_N, int matrixa_K, float *matrixa, float *matrixb, float *matrixc) {
     float *restrict matrixa_tile_buffer;
     float *restrict matrixb_tile_buffer;

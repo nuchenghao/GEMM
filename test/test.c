@@ -123,8 +123,8 @@ static void bench_group(const char *label, int n, int matrixa_M[], int N[], int 
         rand_fill_matrix_fp32(A, m, k);
         rand_fill_matrix_fp32(B, k, nn);
 
-        double blas_time = run_blas_sgemm(m, nn, k, A, B, C_blas);
         double sme_time = run_sme_sgemm(m, nn, k, A, B, C_sme);
+        double blas_time = run_blas_sgemm(m, nn, k, A, B, C_blas);
 
         int match = verify_results(m * nn, C_blas, C_sme);
         speedups[i] = blas_time / sme_time;
