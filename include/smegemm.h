@@ -9,7 +9,7 @@
 #define SUBMATRIX_M 512
 #define SUBMATRIX_K 1024
 #define SUBMATRIX_N 256
-#elif defined(LS)
+#elif defined(HW)
 #define SUBMATRIX_M 64
 #define SUBMATRIX_K 1023
 #define SUBMATRIX_N 64

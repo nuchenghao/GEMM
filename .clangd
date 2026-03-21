@@ -1,3 +1,5 @@
 CompileFlags:
   Add:
     - -I/Users/nuch/workspace/GEMM/include
+    # 若需解析为 LS 平台，可改为 -DLS
+    - -DMAC

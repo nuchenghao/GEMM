@@ -7,7 +7,7 @@
 
 #ifdef MAC
 #include <Accelerate/Accelerate.h>
-#elif defined(LS)
+#elif defined(HW)
 #include "kblas.h"
 #endif
 
@@ -73,7 +73,7 @@ int main() {
     }
 
     free(blas_matrix);
-#elif defined(LS)
+#elif defined(HW)
     float *MatrixKBlas = (float *)malloc(matrixa_M * matrixb_N * sizeof(float));
     memset(MatrixKBlas, 0, matrixa_M * matrixb_N * sizeof(float));
     start_time = dClock();

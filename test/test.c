@@ -8,7 +8,7 @@
 #ifdef MAC
 #include <Accelerate/Accelerate.h>
 void row_packa_output(int m, int k, float *XA, float *result);
-#elif defined(LS)
+#elif defined(HW)
 #include "kblas.h"
 #endif
 
@@ -87,7 +87,7 @@ int unitest_buffer_transpose_submatrixa() {
 static double run_blas_sgemm(int matrixa_M, int N, int matrixa_K, float *A, float *B, float *C) {
     memset(C, 0, matrixa_M * N * sizeof(float));
     double start = dClock();
-#if defined(MAC) || defined(LS)
+#if defined(MAC) || defined(HW)
     cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, matrixa_M, N, matrixa_K, 1.0f, A, matrixa_K, B, N, 0.0f, C, N);
 #endif
     double end = dClock();
@@ -153,8 +153,8 @@ static void compute_mean_var(double *data, int n, double *mean, double *var) {
 }
 
 int unitest_sme_fp32_gemm() {
-#if !defined(MAC) && !defined(LS)
-    printf("No BLAS library available. Define MAC or LS to enable benchmark.\n");
+#if !defined(MAC) && !defined(HW)
+    printf("No BLAS library available. Define MAC or HW to enable benchmark.\n");
     exit(1);
 #endif
 

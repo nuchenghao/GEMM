@@ -1,5 +1,5 @@
-build/
-exec/
+**/build/
+**/exec/
 .clangd
 .clang-format
 .vscode

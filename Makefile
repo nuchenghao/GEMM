@@ -11,13 +11,13 @@ ifeq ($(TARGET),MAC)
   CFLAGS += -DMAC -DACCELERATE_NEW_LAPACK
   LINKFLAGS += -framework Accelerate
   ENTRY = _UnitTest
-else ifeq ($(TARGET),LS)
+else ifeq ($(TARGET),HW)
   MARCH = armv9-a+sve+sve2+sme
   CFLAGS += -DLS
   LINKFLAGS += -lkblas -lm
   ENTRY = UnitTest
 else
-  $(error Unknown TARGET "$(TARGET)". Use MAC or LS)
+  $(error Unknown TARGET "$(TARGET)". Use MAC or HW)
 endif
 
 CFLAGS += -O3 -fno-stack-protector -march=$(MARCH) -Iinclude 
