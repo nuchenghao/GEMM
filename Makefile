@@ -8,12 +8,12 @@ LINKFLAGS = -rtlib=compiler-rt -lmatmul -L ./test
 
 ifeq ($(TARGET),MAC)
   MARCH = armv9-a+nosve+sme
-  CFLAGS += -DMAC -DACCELERATE_NEW_LAPACK
+  CFLAGS += -DACCELERATE_NEW_LAPACK
   LINKFLAGS += -framework Accelerate
   ENTRY = _UnitTest
 else ifeq ($(TARGET),HW)
   MARCH = armv9-a+sve+sve2+sme
-  CFLAGS += -DLS
+  CFLAGS +=
   LINKFLAGS += -lkblas -lm
   ENTRY = UnitTest
 else

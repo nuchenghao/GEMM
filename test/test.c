@@ -5,10 +5,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef MAC
+#ifdef __APPLE__
 #include <Accelerate/Accelerate.h>
 void row_packa_output(int m, int k, float *XA, float *result);
-#elif defined(HW)
+#elif defined(__linux__)
 #include "kblas.h"
 #endif
 
@@ -50,7 +50,7 @@ int unitest_buffer_transpose_submatrixa() {
         rand_fill_matrix_fp32(matrixa, matrixa_M, matrixa_K);
         float *correct = malloc(((matrixa_M + 15) / 16) * 16 * matrixa_K * sizeof(float));
         float *answer = malloc(((matrixa_M + 15) / 16) * 16 * matrixa_K * sizeof(float));
-#ifdef MAC
+#ifdef __APPLE__
         row_packa_output(matrixa_M, matrixa_K, matrixa, correct);
 #endif
         test_buffer_transpose_submatrixa(matrixa_M, matrixa_K, matrixa, answer);
@@ -87,7 +87,7 @@ int unitest_buffer_transpose_submatrixa() {
 static double run_blas_sgemm(int matrixa_M, int N, int matrixa_K, float *A, float *B, float *C) {
     memset(C, 0, matrixa_M * N * sizeof(float));
     double start = dClock();
-#if defined(MAC) || defined(HW)
+#if defined(__APPLE__) || defined(__linux__)
     cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, matrixa_M, N, matrixa_K, 1.0f, A, matrixa_K, B, N, 0.0f, C, N);
 #endif
     double end = dClock();
@@ -153,8 +153,8 @@ static void compute_mean_var(double *data, int n, double *mean, double *var) {
 }
 
 int unitest_sme_fp32_gemm() {
-#if !defined(MAC) && !defined(HW)
-    printf("No BLAS library available. Define MAC or HW to enable benchmark.\n");
+#if !defined(__APPLE__) && !defined(__linux__)
+    printf("No BLAS library available. Only supported on macOS and Linux.\n");
     exit(1);
 #endif
 

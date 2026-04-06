@@ -5,11 +5,11 @@
 #include <stdint.h>
 
 #define SME_CACHELINE_SIZE 128
-#ifdef MAC
+#ifdef __APPLE__
 #define SUBMATRIX_M 512
 #define SUBMATRIX_K 1024
 #define SUBMATRIX_N 256
-#elif defined(HW)
+#elif defined(__linux__)
 #define SUBMATRIX_M 64
 #define SUBMATRIX_K 1023
 #define SUBMATRIX_N 64

@@ -5,9 +5,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef MAC
+#ifdef __APPLE__
 #include <Accelerate/Accelerate.h>
-#elif defined(HW)
+#elif defined(__linux__)
 #include "kblas.h"
 #endif
 
@@ -50,7 +50,7 @@ int main() {
     double sme_time = end_time - start_time;
     printf("SME FP32 GEMM time: %f seconds\n", sme_time);
     int mismatch = 0;
-#ifdef MAC
+#ifdef __APPLE__
     float *blas_matrix = (float *)malloc(matrixa_M * matrixb_N * sizeof(float));
     BLASSetThreading(BLAS_THREADING_SINGLE_THREADED);
     start_time = dClock();
@@ -73,7 +73,7 @@ int main() {
     }
 
     free(blas_matrix);
-#elif defined(HW)
+#elif defined(__linux__)
     float *MatrixKBlas = (float *)malloc(matrixa_M * matrixb_N * sizeof(float));
     memset(MatrixKBlas, 0, matrixa_M * matrixb_N * sizeof(float));
     start_time = dClock();
